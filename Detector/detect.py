@@ -1,10 +1,11 @@
 #store unsynched plates and times in a file periodically check for connection in another script and push updates once connected
 from scipy.misc import imread
-import GetFeatures as gf
 import tensorflow as tf
 import numpy as np
 import threading
 import sys
+sys.path.insert(0,'../CNN')
+import GetFeatures as gf
 import cv2
 import redis
 import time
@@ -89,7 +90,6 @@ def scan(image):
 		plate=[]
 		for ele in sol:
 			plate.append(CHARS[ele])
-		plateCode=plate
 		codes.append(plateCode)
 		counter+=1
 		
