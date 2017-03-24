@@ -90,10 +90,7 @@ def scan(image):
 		for ele in sol:
 			plate.append(CHARS[ele])
 		plateCode=plate
-		if(counter==33):
-			codes.append(['P','C','X','1','7','2'])
-		else:
-			codes.append(plateCode)
+		codes.append(plateCode)
 		counter+=1
 		
 	return normalizeData(codes,sections)
