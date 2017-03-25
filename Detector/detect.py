@@ -2,13 +2,15 @@
 from scipy.misc import imread
 import tensorflow as tf
 import numpy as np
-import threading
+import thread
 import sys
+import dbOperations as db
 sys.path.insert(0,'../CNN')
 import GetFeatures as gf
 import cv2
 import redis
 import time
+import csv
 
 CHARS = ["0","1","2","3","4","5","6","7","8","9","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"]
 
@@ -86,35 +88,26 @@ def scan(image):
 	solutions=res.eval({inputData:images},session=sess)
 	counter=0
 	codes=[]
-	for sol in solutions:
+	for i,sol in enumerate(solutions):
 		plate=[]
 		for ele in sol:
 			plate.append(CHARS[ele])
-		codes.append(plateCode)
+		codes.append(plate)
 		counter+=1
 		
 	return normalizeData(codes,sections)
 
-#Takes a list of plates and checks if in db and updates detected list, r=redisDb
-def updateAndAlert(image,plates,sects,r):
-	#create thread for each plate
-	for i,plate in enumerate(plates):
-		code=''.join(plate)
-		if(r.sismember("vehicles",code)):
-			if(r.sismember("blacklist",code)):
+#Takes a list of plates and checks if in db and updates detected list
+def updateAndAlert(image,plates,sects,r,blacklist):
+	with open("detected.csv","a") as det:
+		for i,plate in enumerate(plates):
+			code=''.join(plate)
+			if code in blacklist:
 				print("Alert: "+code)
 				cv2.rectangle(image, (sects[i][2], sects[i][0]), (sects[i][3], sects[i][1]), (0, 255, 0), 2)
-				cv2.imshow(code, image)
-				cv2.waitKey(0)#Change to 0 for cli img and 1 for camera feed
-			#Code to add time as part of key and have location be the unique identifier for that car at that time
-			#r.sadd("detected:"+code+":"+str(time.time()),*set(["0000,0000"]))
-			r.sadd("detected:"+code,*set([str(time.time())]))
-
-def setupDB():
-	return redis.Redis(
-    host='localhost',
-    port=6379, 
-    password='')
+				cv2.imshow("Detector", image)
+				cv2.waitKey(1)#Change to 0 for cli img and 1 for camera feed
+			det.write(code+","+str(time.time())+"\n")
 
 def getImage(cam):
 	retval,im=cam.read()
@@ -124,11 +117,15 @@ def shutter(cam):
 	temp=getImage(cam)
 	return getImage(cam)
 
-redisDb=setupDB()
+def getBlacklist(r):
+	return r.smembers("blacklist")
+
+redisDb=db.setupDB() #r=redisDb
 cam=cv2.VideoCapture(0)
 prediction = conv_neural_network(inputData)
 
 with tf.Session() as sess:
+	#Setup Trained model
 	saver=tf.train.import_meta_graph('model.meta')
 	saver.restore(sess, tf.train.latest_checkpoint('./'))
 	sess.run(tf.global_variables_initializer())
@@ -136,16 +133,25 @@ with tf.Session() as sess:
 	prediction=tf.reshape(prediction,shape=[-1,7,len(CHARS)])
 	res = tf.argmax(prediction, 2)
 
+	#Download blacklist
+	blacklist=getBlacklist(redisDb)
+
+	#Thread to scan for connection every ten seconds and update db
+	updateDb=thread.start_new_thread(db.update,(redisDb,))
+
 	print("Scanning beginning")
 	#Code for single input image from cli
-	image=imread(sys.argv[1])
-	plates,sects=scan(image)
-	updateAndAlert(image,plates,sects,redisDb)
+	while True:
+		image=imread(sys.argv[1])
+		plates,sects=scan(image)
+		updateAndAlert(image,plates,sects,redisDb,blacklist)
 	'''
-	while(True):
-		capture=shutter(cam)
-		plates,sects=scan(capture)
-		updateAndAlert(capture,plates,sects,redisDb)
-
-	del(cam)
+	try:
+		while(True):
+			capture=shutter(cam)
+			plates,sects=scan(capture)
+			updateAndAlert(capture,plates,sects,redisDb,blacklist)
+	except:
+		print("Exiting System")
+		del(cam)
 	'''

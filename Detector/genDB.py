@@ -1,12 +1,9 @@
 #Generate a random db (Add in known plate to test for positive ID)
 import redis
+import sys
+import dbOperations as db
+sys.path.insert(0,'../CNN')
 import GenPlates as gp
-
-def setupDB():
-	return redis.Redis(
-    host='localhost',
-    port=6379, 
-    password='')
 
 def populateVehicles(r):
 	for i in range(50):
@@ -18,9 +15,8 @@ def populateBlacklist(r):
 		r.sadd("blacklist",*set([r.srandmember("vehicles")]))
 
 def main():
-	r=setupDB()
-	r.delete("vehicles")
-	r.delete("blacklist")
+	r=db.setupDB()
+	r.flushall()
 
 	r.sadd("vehicles",*set(["PCX172"]))
 	r.sadd("blacklist",*set(["PCX172"]))
