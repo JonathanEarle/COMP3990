@@ -107,7 +107,7 @@ def updateAndAlert(image,plates,sects,r,blacklist):
 				cv2.rectangle(image, (sects[i][2], sects[i][0]), (sects[i][3], sects[i][1]), (0, 255, 0), 2)
 				cv2.imshow("Detector", image)
 				cv2.waitKey(1)#Change to 0 for cli img and 1 for camera feed
-			det.write(code+","+str(time.time())+"\n")
+			det.write(code+","+time.strftime("%c").replace(" ","-")+"\n")
 
 def getImage(cam):
 	retval,im=cam.read()
@@ -134,12 +134,17 @@ with tf.Session() as sess:
 	res = tf.argmax(prediction, 2)
 
 	#Download blacklist
-	blacklist=getBlacklist(redisDb)
+	print("Waiting for connection")
+	while True:
+		if(db.isConnected()):
+			blacklist=getBlacklist(redisDb)
+			break
+	print("Connected")
 
 	#Thread to scan for connection every ten seconds and update db
 	updateDb=thread.start_new_thread(db.update,(redisDb,))
 
-	print("Scanning beginning")
+	print("Scanning")
 	#Code for single input image from cli
 	while True:
 		image=imread(sys.argv[1])
@@ -152,6 +157,5 @@ with tf.Session() as sess:
 			plates,sects=scan(capture)
 			updateAndAlert(capture,plates,sects,redisDb,blacklist)
 	except:
-		print("Exiting System")
-		del(cam)
-	'''
+		print("Exiting System")'''
+	del(cam)

@@ -26,7 +26,7 @@ def update(r):
 				for line in det:
 					elements=line.split(",")
 					code=elements[0]
-					t=(float)(elements[1].replace("\n",""))#Time detected
+					t=elements[1].replace("\n","")#Time detected
 					r.sadd("detected:"+code,*set([str(t)]))
 			open("detected.csv", 'wb').close()
 		time.sleep(10)
