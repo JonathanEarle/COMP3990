@@ -118,7 +118,11 @@ def shutter(cam):
 	return getImage(cam)
 
 def getBlacklist(r):
-	return r.smembers("blacklist")
+	#Download blacklist
+	print("Waiting for connection")
+	while !db.isConnected():
+			print("Connected")
+			return r.smembers("blacklist")
 
 redisDb=db.setupDB() #r=redisDb
 cam=cv2.VideoCapture(0)
@@ -134,12 +138,7 @@ with tf.Session() as sess:
 	res = tf.argmax(prediction, 2)
 
 	#Download blacklist
-	print("Waiting for connection")
-	while True:
-		if(db.isConnected()):
-			blacklist=getBlacklist(redisDb)
-			break
-	print("Connected")
+	blacklist=getBlacklist(redisDb)
 
 	#Thread to scan for connection every ten seconds and update db
 	updateDb=thread.start_new_thread(db.update,(redisDb,))

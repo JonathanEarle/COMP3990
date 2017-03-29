@@ -3,7 +3,7 @@ import GetFeatures as gf
 import GenPlates as gp
 import numpy as np
 
-logs_path = '/tmp/tensorflow_logs/example'
+logs_path = '/tmp/tensorflow_logs/logs'
 CHARS = gf.CHARS
 
 images,plates=gf.readData(gf.dataPath)
